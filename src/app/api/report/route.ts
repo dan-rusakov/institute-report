@@ -472,7 +472,7 @@ const inputSnapshotSchema: IJsonSchema = {
   additionalProperties: false,
 };
 
-export const reportResponseSchema: IJsonSchema = {
+const reportResponseSchema: IJsonSchema = {
   type: "object",
   properties: {
     niche: {
