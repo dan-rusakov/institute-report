@@ -566,9 +566,8 @@ const reportResponseSchema: IJsonSchema = {
   additionalProperties: false,
 };
 
-const client = new SynovaCloudSdk(env.SYNOVA_SECRET);
-
 export async function POST(request: Request) {
+  const client = new SynovaCloudSdk(env.SYNOVA_SECRET);
   const body = (await request.json()) as { description: string };
   const description = body.description?.trim();
 
