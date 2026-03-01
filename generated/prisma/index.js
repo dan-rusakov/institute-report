@@ -147,7 +147,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/pluhin/projects/institute-report/generated/prisma",
+      "value": "/Users/rusakov/Projects/institute-report/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -161,7 +161,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/pluhin/projects/institute-report/prisma/schema.prisma",
+    "sourceFilePath": "/Users/rusakov/Projects/institute-report/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

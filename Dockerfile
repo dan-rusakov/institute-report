@@ -6,6 +6,7 @@ WORKDIR /app
 ENV SKIP_ENV_VALIDATION=true
 
 COPY package*.json ./
+COPY prisma ./prisma
 
 RUN npm ci
 
