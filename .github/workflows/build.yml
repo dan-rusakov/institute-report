@@ -103,5 +103,5 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       version: ${{ needs.release-api.outputs.version }}
-      service: lobix-web
+      service: institute-report-generatorx
     secrets: inherit

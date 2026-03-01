@@ -11,9 +11,9 @@ on:
         description: 'Service name'
         type: choice
         options:
-          - lobix-web
+          - institute-report-generator
         required: true
-        default: 'lobix-web'
+        default: 'institute-report-generator'
   workflow_call:
     inputs:
       version:
