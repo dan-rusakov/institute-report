@@ -1,0 +1,85 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'API version to deploy (leave empty for latest)'
+        required: false
+        type: string
+      service:
+        description: 'Service name'
+        type: choice
+        options:
+          - lobix-web
+        required: true
+        default: 'lobix-web'
+  workflow_call:
+    inputs:
+      version:
+        description: 'API version to deploy (leave empty for latest)'
+        required: false
+        type: string
+      service:
+        description: 'Service name'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY_NAME: dan-rusakov
+  IMAGE_NAME: institute-report-generator
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    outputs:
+      status: ${{ job.status }}
+      version: ${{ steps.get-version.outputs.RELEASE_VERSION }}
+    steps:
+      - name: Set variables based on trigger type
+        id: vars
+        run: |
+          echo "Using parameters from ${{ github.event_name }}"
+          echo "SERVICE=${{ inputs.service }}"
+          echo "SERVICE=${{ inputs.service }}" >> $GITHUB_OUTPUT
+          echo "VERSION=${{ inputs.version }}"
+          echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+
+      - name: Get API version to deploy
+        id: get-version
+        run: |
+          if [[ -n "${{ steps.vars.outputs.VERSION }}" ]]; then
+            # Use manually specified version if provided
+            API_VERSION="${{ steps.vars.outputs.VERSION }}"
+            echo "Using manually specified version: $API_VERSION"
+          else
+            # Otherwise get the latest version
+            API_VERSION=latest
+            echo "Using latest API version: $API_VERSION"
+          fi
+          
+          echo "RELEASE_VERSION=$API_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Deploy
+        env:
+          IMAGE_NAME: ${{ steps.vars.outputs.SERVICE }}
+          SERVICE_NAME: ${{ steps.vars.outputs.SERVICE }}
+          VERSION: ${{ steps.get-version.outputs.RELEASE_VERSION }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << EOF
+            set -e
+            cd /home/${{ vars.DEPLOY_USER }}/institute-report-generator
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            docker pull ${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            docker compose down ${{ env.SERVICE_NAME }} || true
+            VERSION=${{ env.VERSION }} docker compose -f docker-compose.yml up -d ${{ env.SERVICE_NAME }}
+          EOF

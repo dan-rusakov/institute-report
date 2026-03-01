@@ -1,0 +1,107 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY_NAME: dan-rusakov
+  IMAGE_NAME: institute-report-generator
+
+jobs:
+  release-api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+        status: ${{ job.status }}
+        version: ${{ steps.version_after.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set git user
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+
+      - name: Get current version
+        id: version_before
+        run: echo "version=$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+
+      - name: Get last commit message
+        id: last_commit
+        run: echo "msg=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Bump version based on commit message
+        id: version_bump
+        run: |
+          msg="${{ steps.last_commit.outputs.msg }}"
+          if [[ "$msg" == feat* ]]; then
+            npm version minor --no-git-tag-version
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          elif [[ "$msg" == fix* ]]; then
+            npm version patch --no-git-tag-version
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          elif [[ "$msg" == BREAKING\ CHANGE* ]] || [[ "$msg" == major:* ]]; then
+            npm version major --no-git-tag-version
+            echo "bump=major" >> $GITHUB_OUTPUT
+          else
+            npm version patch --no-git-tag-version
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Get new version
+        id: version_after
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to v${{ steps.version_after.outputs.version }} [skip ci]"
+          git push
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:${{ steps.version_after.outputs.version }}
+          build-args: |
+            VERSION=${{ steps.version_after.outputs.version }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            SYNOVA_SECRET=${{ secrets.SYNOVA_SECRET }}
+
+  deploy:
+    needs: release-api
+    if: success() && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.release-api.outputs.version }}
+      service: lobix-web
+    secrets: inherit
