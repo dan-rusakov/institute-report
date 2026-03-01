@@ -623,10 +623,7 @@ export async function POST(request: Request) {
       input_snapshot: {
         description: description,
         structured_parameters: Object.fromEntries(
-          responseData.input_snapshot.structured_parameters_array as [
-            string,
-            string | number,
-          ][],
+          responseData.input_snapshot.structured_parameters_array,
         ),
       },
     };
