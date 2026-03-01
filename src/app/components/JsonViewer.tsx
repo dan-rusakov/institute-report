@@ -7,7 +7,7 @@ export function JsonViewer({ data }: { data: unknown }) {
   return (
     <JsonView
       src={data}
-      theme="vscode"
+      theme="github"
       collapseStringsAfterLength={80}
       collapsed={2}
       enableClipboard
