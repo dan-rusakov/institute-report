@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { SynovaCloudSdk } from "@synova-cloud/sdk";
+import { SynovaCloudSdk, SchemaResolver } from "@synova-cloud/sdk";
 import { db } from "~/server/db";
 import { env } from "~/env";
 
@@ -94,9 +94,12 @@ const nonInterpretationNoticeSchema = z.object({
 
 const inputSnapshotSchema = z.object({
   structured_parameters_array: z
-    .array(z.tuple([z.string(), z.union([z.string(), z.number()])]))
+    .array(z.object({
+      key: z.string().describe("Parameter name"),
+      value: z.string().describe("Parameter value"),
+    }))
     .describe(
-      "Key-value pairs of structured parameters extracted from the input. Each entry is [parameter_name, value]",
+      "Key-value pairs of structured parameters extracted from the input",
     ),
 });
 
@@ -176,6 +179,10 @@ export async function POST(request: Request) {
   }
 
   try {
+    // DEBUG
+    const generatedSchema = await SchemaResolver.resolve(reportResponseSchema);
+    console.log("Generated JSON Schema:", JSON.stringify(generatedSchema, null, 2));
+
     const result = await client.prompts.execute<ReportResponse>(
       "prm_HFL0R9Cgp2lv",
       {
@@ -185,6 +192,8 @@ export async function POST(request: Request) {
       variables: { raw_description: description },
       responseSchema: reportResponseSchema,
     });
+
+    console.log("Raw response:", JSON.stringify(result, null, 2));
 
     const responseData = result.object;
 
@@ -214,13 +223,26 @@ export async function POST(request: Request) {
       input_snapshot: {
         description: description,
         structured_parameters: Object.fromEntries(
-          responseData?.input_snapshot.structured_parameters_array ?? [],
+          responseData?.input_snapshot.structured_parameters_array.map(
+            ({ key, value }) => [key, value]
+          ) ?? [],
         ),
       },
     };
 
     return NextResponse.json(reportResponse, { status: 200 });
   } catch (error) {
-    console.error("Error generating report:", JSON.stringify(error, null, 2));
+    console.error("Error generating report:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    if ('details' in error) {
+      console.error("Error details:", JSON.stringify((error as any).details, null, 2));
+    }
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    );
   }
 }
