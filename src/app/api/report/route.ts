@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { SynovaCloudSdk, SchemaResolver } from "@synova-cloud/sdk";
+import { SynovaCloudSdk } from "@synova-cloud/sdk";
 import { db } from "~/server/db";
 import { env } from "~/env";
 
@@ -179,10 +179,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    // DEBUG
-    const generatedSchema = await SchemaResolver.resolve(reportResponseSchema);
-    console.log("Generated JSON Schema:", JSON.stringify(generatedSchema, null, 2));
-
     const result = await client.prompts.execute<ReportResponse>(
       "prm_HFL0R9Cgp2lv",
       {
