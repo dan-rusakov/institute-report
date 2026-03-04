@@ -193,7 +193,7 @@ const structuralMismatchSchema = z.object({
     ),
 });
 
-export const reportResponseSchema = z.object({
+const reportResponseSchema = z.object({
   case_identification: caseIdentificationSchema.describe(
     "Block 0: Structural summary identifying niche, object, and subject of the case"
   ),
