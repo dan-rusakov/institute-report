@@ -5,153 +5,237 @@ import { SynovaCloudSdk } from "@synova-cloud/sdk";
 import { db } from "~/server/db";
 import { env } from "~/env";
 
-const uncomfortableQuestionSchema = z.object({
-  question_id: z.string().describe("Unique identifier for the question"),
-  text: z
+const caseIdentificationSchema = z.object({
+  niche: z
     .string()
+    .describe("Business domain or structural niche of the case"),
+  object: z
+    .string()
+    .describe("Primary asset, structure, or business entity involved in the case"),
+  subject: z
+    .string()
+    .describe("Core structural or transactional action being considered in the case"),
+});
+
+const originalDecisionStructureSchema = z.object({
+  participants: z
+    .array(
+      z.string().describe(
+        "Name or structural designation of a participant explicitly mentioned in the case (e.g., Founder, Investor, Company, Partner). Only actors directly involved in the described decision configuration.",
+      ),
+    )
     .describe(
-      "The uncomfortable question text that reveals hidden risks or assumptions",
+      "List of all participants explicitly involved in the decision structure. Includes individuals, legal entities, or roles that act as independent parties within the configuration. No inferred participants.",
     ),
-  answer_provided: z
-    .enum(["true", "false"])
-    .describe("Whether the user provided an answer to this question"),
-  answer_snapshot: z
-    .string()
+
+  roles: z
+    .array(
+      z.string().describe(
+        "Statement describing the functional role of a participant (e.g., operational management, capital provider, passive investor, managing partner). Must reflect what the participant does within the structure.",
+      ),
+    )
     .describe(
-      "Snapshot of the answer provided by the user, or empty string if not answered",
+      "Functional roles of participants within the decision configuration. Roles must reflect explicitly stated operational, managerial, financial, or governance functions. Do not infer unstated responsibilities.",
+    ),
+
+  declared_authorities: z
+    .array(
+      z.string().describe(
+        "Statement describing explicitly declared decision-making powers, governance rights, management authority, blocking rights, or lack of participation in management.",
+      ),
+    )
+    .describe(
+      "Explicitly stated authorities, governance powers, or limitations of authority within the structure. Includes management control, voting rights, exclusion from operations, and similar declared powers.",
+    ),
+
+  resources: z
+    .array(
+      z.string().describe(
+        "Tangible or intangible assets explicitly mentioned in the case, such as business locations, equipment, operational model, intellectual property, or capital contribution.",
+      ),
+    )
+    .describe(
+      "Resources involved in the decision configuration. Includes business assets, operational infrastructure, capital amounts, equipment, and other assets explicitly referenced in the case.",
+    ),
+
+  funding_sources: z
+    .array(
+      z.string().describe(
+        "Source of financial capital explicitly described in the case (e.g., investor capital, retained earnings, external financing).",
+      ),
+    )
+    .describe(
+      "Declared sources of financing supporting the structure. Only explicitly stated funding channels. Do not assume additional financing mechanisms.",
+    ),
+
+  obligations: z
+    .array(
+      z.string().describe(
+        "Explicit commitment, duty, or obligation undertaken by a participant (e.g., profit distribution, transfer of ownership, capital injection, legal re-registration).",
+      ),
+    )
+    .describe(
+      "Obligations of each party as directly stated in the description. Includes financial, legal, operational, or structural commitments. Must reflect explicit commitments, not inferred duties.",
+    ),
+
+  declared_goals: z
+    .array(
+      z.string().describe(
+        "Stated objective or purpose of the arrangement, such as capital attraction, business expansion, ownership restructuring, or preservation of operational control.",
+      ),
+    )
+    .describe(
+      "Goals or intended outcomes explicitly mentioned in the case. Only record clearly articulated objectives. Do not infer strategic motives.",
+    ),
+
+  formal_agreements: z
+    .array(
+      z.string().describe(
+        "Explicitly mentioned formalized agreements, contractual mechanisms, calculation formulas, documented procedures, or legally fixed terms.",
+      ),
+    )
+    .describe(
+      "Formally documented or contractually fixed elements within the structure. Includes signed agreements, planned contracts, fixed formulas, exit procedures, payment timelines, and other legally закреплённые mechanisms.",
     ),
 });
 
-const structuralExposureSchema = z.object({
-  exposure_id: z
+const symmetrySchema = z.object({
+  symmetry_id: z
     .string()
-    .describe("Unique identifier for the structural exposure"),
+    .describe("Unique identifier of the symmetry or asymmetry element (SA-01, SA-02, etc.)"),
   description: z
     .string()
     .describe(
-      "Description of a structural vulnerability or systemic risk in the case",
+      "Statement describing structural relationship between shares and control, obligations and authority, risk distribution relative to shares, or explicitly stated dominant authority",
+    ),
+});
+
+const controlDistributionSchema = z.object({
+  control_id: z
+    .string()
+    .describe("Unique identifier for control distribution element (CD-01, CD-02, etc.)"),
+  description: z
+    .string()
+    .describe(
+      "Statement describing explicitly declared control over financial flows, assets, code, access, data, final decisions, blocking rights, or unilateral change mechanisms",
+    ),
+});
+
+const responsibilityDistributionSchema = z.object({
+  responsibility_id: z
+    .string()
+    .describe("Unique identifier for responsibility element (RD-01, RD-02, etc.)"),
+  description: z
+    .string()
+    .describe(
+      "Statement describing explicitly declared financial, legal, operational, reputational responsibility, or personal guarantees",
     ),
 });
 
 const irreversibilityPointSchema = z.object({
   point_id: z
     .string()
-    .describe("Unique identifier for the irreversibility point"),
+    .describe("Unique identifier for irreversibility point (IP-01, IP-02, etc.)"),
   description: z
     .string()
     .describe(
-      "Description of a decision or action after which rollback becomes impossible or extremely costly",
+      "Statement describing an action after which obligations arise, control is lost, liability activates, or return to original position requires legal or factual change",
     ),
 });
 
-const controlLossPointSchema = z.object({
-  point_id: z.string().describe("Unique identifier for the control loss point"),
-  description: z
+const uncomfortableQuestionSchema = z.object({
+  question_id: z
+    .string()
+    .describe("Identifier UQ-01 to UQ-07 corresponding to fixed uncomfortable questions"),
+  text: z
+    .string()
+    .describe("Exact fixed Russian question text as defined in system prompt"),
+  answer_provided: z
+    .enum(["true", "false"])
+    .describe("Indicates whether the case explicitly contains an answer to this question"),
+  answer_snapshot: z
     .string()
     .describe(
-      "Description of a moment or condition where the actor loses meaningful influence over the outcome",
+      "Exact factual fragment from the case description answering the question; empty string if answer_provided is false",
     ),
 });
 
-const dependencyNodeSchema = z.object({
-  dependency_id: z
+const potentialControlLossPointSchema = z.object({
+  point_id: z
     .string()
-    .describe("Unique identifier for the dependency node"),
+    .describe("Unique identifier for potential control loss point (CL-01, CL-02, etc.)"),
   description: z
     .string()
     .describe(
-      "Description of an external factor, actor, or resource the outcome critically depends on",
+      "Statement describing explicitly stated situation where control may transfer, dependency arises, access becomes unilateral, restoration requires consent, or outcome depends on external factors",
     ),
 });
 
 const fixationGapSchema = z.object({
-  gap_id: z.string().describe("Unique identifier for the fixation gap"),
+  gap_id: z
+    .string()
+    .describe("Unique identifier for element without formal fixation (FG-01, FG-02, etc.)"),
   description: z
     .string()
     .describe(
-      "Description of an agreement, commitment, or state that is not properly documented or legally secured",
+      "Statement describing explicitly mentioned element lacking legal documentation, revision mechanism, exit mechanism, or dependent on future agreements",
     ),
 });
 
-const boundaryConditionSchema = z.object({
-  condition_id: z
+const structuralMismatchSchema = z.object({
+  mismatch_id: z
     .string()
-    .describe("Unique identifier for the boundary condition"),
+    .describe("Unique identifier for structural mismatch element (SM-01, SM-02, etc.)"),
   description: z
     .string()
     .describe(
-      "Description of an assumption or environmental condition that must hold for the plan to remain valid",
+      "Statement describing explicitly observable mismatch between share and influence, responsibility and control, risk and exit mechanism, obligations and rights, or investment and authority",
     ),
 });
 
-const nonInterpretationNoticeSchema = z.object({
-  text: z
-    .string()
-    .describe(
-      "Disclaimer clarifying what this analysis does not constitute (legal, financial, or professional advice)",
-    ),
-});
+export const reportResponseSchema = z.object({
+  case_identification: caseIdentificationSchema.describe(
+    "Block 0: Structural summary identifying niche, object, and subject of the case"
+  ),
 
-const inputSnapshotSchema = z.object({
-  structured_parameters_array: z
-    .array(z.object({
-      key: z.string().describe("Parameter name"),
-      value: z.string().describe("Parameter value"),
-    }))
-    .describe(
-      "Key-value pairs of structured parameters extracted from the input",
-    ),
-});
+  original_decision_structure: z
+    .array(originalDecisionStructureSchema)
+    .describe("Block 1: Structural elements of the original decision configuration"),
 
-const reportResponseSchema = z.object({
-  niche: z
-    .string()
-    .describe("Business domain or industry niche the case belongs to"),
-  case_type: z
-    .string()
-    .describe("Type or category of the case being analyzed"),
-  block_order: z
-    .array(z.string())
-    .describe(
-      "Ordered list of report block identifiers defining the analysis structure",
-    ),
-  uncomfortable_questions: z
-    .array(uncomfortableQuestionSchema)
-    .describe(
-      "List of probing questions that surface hidden risks, assumptions, or overlooked factors",
-    ),
-  structural_exposure: z
-    .array(structuralExposureSchema)
-    .describe(
-      "Systemic vulnerabilities and structural weaknesses identified in the case",
-    ),
+  formal_symmetry_asymmetry: z
+    .array(symmetrySchema)
+    .describe("Block 2: Structural symmetry or asymmetry between shares, control, obligations, and risk"),
+
+  control_distribution: z
+    .array(controlDistributionSchema)
+    .describe("Block 3: Distribution of control over assets, flows, decisions, and access"),
+
+  responsibility_distribution: z
+    .array(responsibilityDistributionSchema)
+    .describe("Block 4: Distribution of financial, legal, operational, and reputational responsibility"),
+
   irreversibility_points: z
     .array(irreversibilityPointSchema)
-    .describe("Points of no return where decisions become irreversible"),
-  control_loss_points: z
-    .array(controlLossPointSchema)
-    .describe(
-      "Moments or conditions where the actor loses control over the outcome",
-    ),
-  dependency_nodes: z
-    .array(dependencyNodeSchema)
-    .describe("Critical external dependencies that the outcome hinges on"),
-  fixation_gaps: z
-    .array(fixationGapSchema)
-    .describe(
-      "Missing documentation, unrecorded agreements, or legally unsecured commitments",
-    ),
-  boundary_conditions: z
-    .array(boundaryConditionSchema)
-    .describe(
-      "Assumptions and environmental conditions required for the analysis to remain valid",
-    ),
-  non_interpretation_notice: nonInterpretationNoticeSchema.describe(
-    "Disclaimer about the non-advisory nature of this analysis",
-  ),
-  input_snapshot: inputSnapshotSchema.describe(
-    "Structured summary of the input as interpreted by the model",
-  ),
+    .describe("Block 5: Points where rollback becomes structurally impossible without change of position"),
+
+  uncomfortable_questions: z
+    .array(uncomfortableQuestionSchema)
+    .describe("Block 6: Seven fixed uncomfortable questions with explicit answer detection"),
+
+  potential_control_loss_points: z
+    .array(potentialControlLossPointSchema)
+    .describe("Block 7: Potential situations of control transfer or dependency"),
+
+  uncertainty_and_gaps: z
+    .object({
+      elements_without_formal_fixation: z
+        .array(fixationGapSchema)
+        .describe("Block 8.1: Elements lacking legal or procedural fixation"),
+      structural_mismatches: z
+        .array(structuralMismatchSchema)
+        .describe("Block 8.2: Explicit structural inconsistencies or mismatches"),
+    })
+    .describe("Block 8: Uncertainty zones and structural gaps"),
 });
 
 type ReportResponse = z.infer<typeof reportResponseSchema>;
@@ -175,67 +259,47 @@ export async function POST(request: Request) {
   });
 
   if (existing) {
-    return NextResponse.json({ error: "duplicate" }, { status: 409 });
+    return NextResponse.json(existing.response, { status: 200 });
   }
 
   try {
     const result = await client.prompts.execute<ReportResponse>(
       "prm_HFL0R9Cgp2lv",
       {
-      provider: "anthropic",
-      model: "claude-sonnet-4-5",
-      tag: "latest",
-      variables: { raw_description: description },
-      responseSchema: reportResponseSchema,
-    });
-
-    console.log("Raw response:", JSON.stringify(result, null, 2));
+        provider: 'openai',
+        model: 'gpt-5.2',
+        tag: "latest",
+        variables: { raw_description: description },
+        responseSchema: reportResponseSchema,
+      });
 
     const responseData = result.object;
-
-    console.log("Response:", responseData);
-    console.log("Usage:", result.executionUsage);
 
     const report = await db.report.create({
       data: {
         raw_description: description,
         raw_description_hash: hash,
-        provider: "anthropic",
-        model: "claude-sonnet-4-5",
+        provider: 'openai',
+        model: 'gpt-5.2',
         response: {},
       },
     });
 
     const reportResponse = {
       ...responseData,
-      report_version: "1.0",
-      logic_version: "fixed_v1.0",
       report_id: report.id,
       created_at: report.createdAt,
-      regeneration_allowed: false,
-      post_processing_allowed: false,
-      uncomfortable_questions_count:
-        responseData?.uncomfortable_questions.length,
-      input_snapshot: {
-        description: description,
-        structured_parameters: Object.fromEntries(
-          responseData?.input_snapshot.structured_parameters_array.map(
-            ({ key, value }) => [key, value]
-          ) ?? [],
-        ),
-      },
     };
+
+    await db.report.update({
+      where: { id: report.id },
+      data: { response: reportResponse },
+    });
 
     return NextResponse.json(reportResponse, { status: 200 });
   } catch (error) {
     console.error("Error generating report:", error);
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    if ('details' in error) {
-      console.error("Error details:", JSON.stringify((error as any).details, null, 2));
-    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },

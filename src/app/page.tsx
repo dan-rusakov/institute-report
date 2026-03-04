@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { JsonViewer } from "./components/JsonViewer";
+import { ReportDocument, type ReportResponse } from "./components/ReportDocument";
 
 export default function HomePage() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState(false);
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<ReportResponse | null>(null);
 
   async function handleSubmit() {
     if (!description.trim()) return;
@@ -31,7 +31,7 @@ export default function HomePage() {
       }
       if (!res.ok) throw new Error("Request failed");
 
-      const data = (await res.json()) as Record<string, unknown>;
+      const data = (await res.json()) as ReportResponse;
       setResult(data);
       setDescription("");
     } catch {
@@ -41,39 +41,34 @@ export default function HomePage() {
     }
   }
 
+  if (result) {
+    return (
+      <main className="min-h-screen bg-(--bg-page)">
+        <ReportDocument data={result} onBack={() => setResult(null)} />
+      </main>
+    );
+  }
+
   return (
-    <main
-      className={`min-h-screen bg-(--bg-page) flex flex-col items-center px-4 transition-all duration-300 ${result ? "justify-start py-12" : "justify-center py-6"
-        }`}
-    >
-      <div
-        className={`w-full transition-all duration-300 ${result ? "max-w-3xl" : "max-w-lg"
-          }`}
-      >
-        <div className="mb-9 flex flex-col items-center text-center gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-(--text-primary) tracking-tight leading-tight">
-              Генерация репорта
-            </h1>
-            <p className="mt-1.5 text-[15px] text-(--text-secondary)">
-              Опишите запрос, и система автоматически сформирует отчёт
-            </p>
-          </div>
+    <main className="min-h-screen bg-(--bg-page) flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl flex flex-col gap-8">
+        <div className="flex flex-col items-center text-center gap-2">
+          <h1 className="text-[32px] font-bold text-(--text-primary) tracking-tight leading-tight">
+            Генерация репорта
+          </h1>
+          <p className="text-[16px] text-(--text-secondary)">
+            Опишите запрос, и система автоматически сформирует структурный отчёт
+          </p>
         </div>
 
         <div className="bg-(--bg-card) rounded-2xl border border-(--border) shadow-(--shadow-card) p-6 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-(--text-secondary) tracking-wide">
-              Описание запроса
-            </label>
-            <textarea
-              className="w-full min-h-36 resize-y rounded-xl border border-(--border) bg-(--bg-input) px-3.5 py-3 text-sm text-(--text-primary) placeholder-(--text-muted) leading-relaxed outline-none transition-all duration-150 focus:border-(--border-focus) focus:ring-3 focus:ring-(--accent)/10 disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="Введите запрос для генерации репорта..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+          <textarea
+            className="w-full min-h-56 resize-y rounded-xl border border-(--border) bg-(--bg-input) px-4 py-3.5 text-sm text-(--text-primary) placeholder-(--text-muted) leading-relaxed outline-none transition-all duration-150 focus:border-(--border-focus) focus:ring-3 focus:ring-(--accent)/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder="Введите описание кейса для генерации структурного репорта..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={loading}
+          />
 
           {duplicate && (
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[13px] text-(--warning)">
@@ -100,11 +95,11 @@ export default function HomePage() {
           <button
             onClick={handleSubmit}
             disabled={loading || !description.trim()}
-            className="w-full py-2.5 px-5 rounded-xl bg-(--accent) text-white text-sm font-semibold transition-colors duration-150 hover:bg-(--accent-hover) disabled:bg-(--text-muted) disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 px-5 rounded-xl bg-(--accent) text-white text-[15px] font-semibold transition-colors duration-150 hover:bg-(--accent-hover) disabled:bg-(--text-muted) disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
                 Генерация...
@@ -114,26 +109,6 @@ export default function HomePage() {
             )}
           </button>
         </div>
-
-        {result && (
-          <div className="mt-4 bg-(--bg-card) rounded-2xl border border-(--border) shadow-(--shadow-card) overflow-hidden">
-            <div className="px-5 py-4 border-b border-(--border) flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                <span className="text-sm font-semibold text-(--text-primary)">Результат</span>
-              </div>
-              <button
-                onClick={() => setResult(null)}
-                className="text-[13px] text-(--text-muted) hover:text-(--text-secondary) hover:bg-(--bg-input) px-2 py-1 rounded-md transition-colors duration-150"
-              >
-                Закрыть
-              </button>
-            </div>
-            <div className="p-5 max-h-[600px] overflow-y-auto">
-              <JsonViewer data={result} />
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
