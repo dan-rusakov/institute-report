@@ -12,6 +12,7 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     SYNOVA_SECRET: z.string(),
+    PROMPT_VERSION_TAG: z.string(),
   },
 
   /**
@@ -31,6 +32,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     SYNOVA_SECRET: process.env.SYNOVA_SECRET,
+    PROMPT_VERSION_TAG: process.env.PROMPT_VERSION_TAG,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

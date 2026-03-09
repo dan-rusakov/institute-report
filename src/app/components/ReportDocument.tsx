@@ -11,12 +11,19 @@ export type Block1Entry = {
   formal_agreements: string[];
 };
 
+export type CaseIdentification = {
+  case_type: string;
+  primary_asset: string;
+  decision_scale: string;
+  user_participation_format: string;
+  operational_control_arrangement: string;
+  business_stage: string;
+  participant_count: string;
+  structural_relationship: string;
+};
+
 export type ReportResponse = {
-  case_identification: {
-    niche: string;
-    object: string;
-    subject: string;
-  };
+  case_identification: CaseIdentification;
   original_decision_structure: Block1Entry[];
   formal_symmetry_asymmetry: Array<{ symmetry_id: string; description: string }>;
   control_distribution: Array<{ control_id: string; description: string }>;
@@ -113,17 +120,41 @@ export function ReportDocument({ data, onBack }: Props) {
       </div>
 
       <div className="bg-(--bg-card) rounded-2xl border border-(--border) shadow-(--shadow-card) p-8 flex flex-col gap-8">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
           <p className="text-[12px] font-semibold uppercase tracking-widest text-(--text-muted)">
             Структурный репорт
           </p>
-          <h1 className="text-[26px] font-bold text-(--text-primary) leading-snug">
-            {data.case_identification.object}
-          </h1>
-          <p className="text-[15px] text-(--text-secondary)">{data.case_identification.subject}</p>
-          <span className="mt-1 inline-flex self-start items-center text-[12px] font-medium text-(--accent) bg-(--bg-input) border border-(--border) rounded-full px-2.5 py-0.5">
-            {data.case_identification.niche}
-          </span>
+          <div className="flex items-start gap-3">
+            <h1 className="text-[26px] font-bold text-(--text-primary) leading-snug">
+              {data.case_identification.case_type}
+            </h1>
+          </div>
+          {data.case_identification.primary_asset && (
+            <p className="text-[15px] text-(--text-secondary) leading-relaxed">
+              {data.case_identification.primary_asset}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mt-1">
+            {(
+              [
+                { label: "Масштаб", value: data.case_identification.decision_scale },
+                { label: "Участие", value: data.case_identification.user_participation_format },
+                { label: "Управление", value: data.case_identification.operational_control_arrangement },
+                { label: "Стадия", value: data.case_identification.business_stage },
+                { label: "Участники", value: data.case_identification.participant_count },
+                { label: "Отношения", value: data.case_identification.structural_relationship },
+              ] as { label: string; value: string }[]
+            )
+              .filter((f) => f.value)
+              .map((f) => (
+                <div key={f.label} className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-(--text-muted)">
+                    {f.label}
+                  </span>
+                  <span className="text-[13px] text-(--text-primary) leading-snug">{f.value}</span>
+                </div>
+              ))}
+          </div>
         </div>
 
         <Section title="Блок 1 — Исходная структура решения">

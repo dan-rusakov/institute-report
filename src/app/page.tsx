@@ -1,50 +1,176 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ReportDocument, type ReportResponse } from "./components/ReportDocument";
+import { ClarificationForm } from "./components/ClarificationForm";
+import type { ClarificationQuestion } from "~/app/types/clarificationSchema";
+
+type Phase = 'input' | 'clarifying' | 'report';
+
+interface ClarificationState {
+  questions: ClarificationQuestion[];
+  message: string;
+}
 
 export default function HomePage() {
-  const [description, setDescription] = useState("");
+  const [phase, setPhase] = useState<Phase>('input');
+  const [description, setDescription] = useState('');
+  const [originalDescription, setOriginalDescription] = useState('');
+  const [previousAnswers, setPreviousAnswers] = useState<{ question: string; answer: string }[]>([]);
+  const [clarification, setClarification] = useState<ClarificationState | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [duplicate, setDuplicate] = useState(false);
+  const [initializing, setInitializing] = useState(false);
+  const [error, setError] = useState('');
   const [result, setResult] = useState<ReportResponse | null>(null);
+  const [reportHash, setReportHash] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  async function handleSubmit() {
-    if (!description.trim()) return;
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = params.get('hash');
+    if (!hash) return;
 
+    setInitializing(true);
+
+    fetch(`/api/report?hash=${hash}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Not found');
+        return res.json() as Promise<{ status: string; hash?: string } & Record<string, unknown>>;
+      })
+      .then((data) => {
+        const { status: _status, hash: h, ...reportData } = data;
+        setResult(reportData as ReportResponse);
+        setReportHash(h ?? hash);
+        setPhase('report');
+      })
+      .catch(() => {
+        window.history.replaceState(null, '', window.location.pathname);
+      })
+      .finally(() => setInitializing(false));
+  }, []);
+
+  async function callApi(desc: string, answers: { question: string; answer: string }[]) {
     setLoading(true);
-    setError("");
-    setDuplicate(false);
-    setResult(null);
+    setError('');
 
     try {
-      const res = await fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description }),
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: desc, previousAnswers: answers }),
       });
 
-      if (res.status === 409) {
-        setDuplicate(true);
-        return;
-      }
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) throw new Error('Request failed');
 
-      const data = (await res.json()) as ReportResponse;
-      setResult(data);
-      setDescription("");
+      const data = (await res.json()) as { status: string; hash?: string } & Record<string, unknown>;
+
+      if (data.status === 'clarification_needed') {
+        setClarification({
+          questions: data.questions as ClarificationQuestion[],
+          message: data.message_to_user as string,
+        });
+        setPhase('clarifying');
+      } else {
+        const { status: _status, hash: newHash, ...reportData } = data;
+        if (newHash) {
+          setReportHash(newHash);
+          window.history.replaceState(null, '', `?hash=${newHash}`);
+        }
+        setResult(reportData as ReportResponse);
+        setPhase('report');
+      }
     } catch {
-      setError("Не удалось создать репорт. Попробуйте ещё раз.");
+      setError('Не удалось создать репорт. Попробуйте ещё раз.');
     } finally {
       setLoading(false);
     }
   }
 
-  if (result) {
+  async function handleSubmit() {
+    if (!description.trim()) return;
+    setOriginalDescription(description);
+    setPreviousAnswers([]);
+    await callApi(description, []);
+  }
+
+  async function handleClarificationSubmit(answers: { question: string; answer: string }[]) {
+    const merged = [...previousAnswers, ...answers];
+    setPreviousAnswers(merged);
+    await callApi(originalDescription, merged);
+  }
+
+  async function handleCopyLink() {
+    if (!reportHash) return;
+    const url = `${window.location.origin}?hash=${reportHash}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleReset() {
+    setPhase('input');
+    setDescription('');
+    setOriginalDescription('');
+    setPreviousAnswers([]);
+    setClarification(null);
+    setResult(null);
+    setError('');
+    setReportHash(null);
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
+  if (initializing) {
+    return (
+      <main className="min-h-screen bg-(--bg-page) flex items-center justify-center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin text-(--text-muted)">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      </main>
+    );
+  }
+
+  if (phase === 'report' && result) {
     return (
       <main className="min-h-screen bg-(--bg-page)">
-        <ReportDocument data={result} onBack={() => setResult(null)} />
+        {reportHash && (
+          <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-2 bg-(--bg-card) border-b border-(--border)">
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] text-(--text-secondary) hover:bg-(--bg-input) transition-colors duration-150"
+            >
+              {copied ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-(--accent)">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Скопировано
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  Поделиться репортом
+                </>
+              )}
+            </button>
+          </div>
+        )}
+        <ReportDocument data={result} onBack={handleReset} />
+      </main>
+    );
+  }
+
+  if (phase === 'clarifying' && clarification) {
+    return (
+      <main className="min-h-screen bg-(--bg-page) flex flex-col items-center justify-center px-4 py-12">
+        <ClarificationForm
+          questions={clarification.questions}
+          message={clarification.message}
+          isLoading={loading}
+          onSubmit={handleClarificationSubmit}
+        />
       </main>
     );
   }
@@ -70,17 +196,6 @@ export default function HomePage() {
             disabled={loading}
           />
 
-          {duplicate && (
-            <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[13px] text-(--warning)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              Репорт по этому запросу уже существует
-            </div>
-          )}
-
           {error && (
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-[13px] text-(--error)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -102,10 +217,10 @@ export default function HomePage() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                Генерация...
+                Анализ...
               </>
             ) : (
-              "Сгенерировать репорт"
+              'Сгенерировать репорт'
             )}
           </button>
         </div>
