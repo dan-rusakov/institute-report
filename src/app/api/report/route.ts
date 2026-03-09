@@ -136,7 +136,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ status: 'report_ready', hash, ...reportResponse });
   } catch (error) {
-    console.log(error.details);
     console.error("Error generating report:", error instanceof Error ? error.message : error);
 
     return NextResponse.json(
