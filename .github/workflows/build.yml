@@ -96,7 +96,7 @@ jobs:
             VERSION=${{ steps.version_after.outputs.version }}
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             SYNOVA_SECRET=${{ secrets.SYNOVA_SECRET }}
-            PROMPT_VERSION_TAG=${{ secrets.PROMPT_VERSION_TAG }}
+            PROMPT_VERSION_TAG=${{ vars.PROMPT_VERSION_TAG }}
 
   deploy:
     needs: release-api
