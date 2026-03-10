@@ -73,7 +73,7 @@ function SubSection({ title, children }: { title: string; children: React.ReactN
 
 function ItemList({ prefix, items }: { prefix: string; items: string[] }) {
   if (!items || items.length === 0)
-    return <p className="text-sm text-(--text-muted) italic">Нет данных</p>;
+    return <p className="text-sm text-(--text-muted) italic">Информация не была предоставлена или не применима к данному блоку</p>;
   return (
     <ul className="flex flex-col gap-2.5">
       {items.map((item, idx) => (
@@ -159,7 +159,7 @@ export function ReportDocument({ data, onBack }: Props) {
 
         <Section title="Блок 1 — Исходная структура решения">
           {!data.original_decision_structure?.length ? (
-            <p className="text-sm text-(--text-muted) italic">Нет данных</p>
+            <p className="text-sm text-(--text-muted) italic">Информация не была предоставлена или не применима к данному блоку</p>
           ) : (
             data.original_decision_structure.map((entry, entryIdx) => (
               <div key={entryIdx} className="flex flex-col gap-5">
@@ -196,7 +196,7 @@ export function ReportDocument({ data, onBack }: Props) {
 
         <Section title="Блок 6 — Неудобные вопросы">
           {!data.uncomfortable_questions?.length ? (
-            <p className="text-sm text-(--text-muted) italic">Нет данных</p>
+            <p className="text-sm text-(--text-muted) italic">Информация не была предоставлена или не применима к данному блоку</p>
           ) : (
             <ul className="flex flex-col gap-4">
               {data.uncomfortable_questions.map((q, idx) => (
