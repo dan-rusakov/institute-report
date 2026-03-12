@@ -35,7 +35,7 @@ export type ReportResponse = {
     answer_provided: "true" | "false";
     answer_snapshot: string;
   }>;
-  potential_control_loss_points: Array<{ point_id: string; description: string }>;
+  structural_dependencies: Array<{ dependency_id: string; description: string }>;
   uncertainty_and_gaps: {
     elements_without_formal_fixation: Array<{ gap_id: string; description: string }>;
     structural_mismatches: Array<{ mismatch_id: string; description: string }>;
@@ -226,8 +226,8 @@ export function ReportDocument({ data, onBack }: Props) {
           )}
         </Section>
 
-        <Section title="Блок 7 — Потенциальные точки потери контроля">
-          <ItemList prefix="7" items={data.potential_control_loss_points.map((i) => i.description)} />
+        <Section title="Блок 7 — Структурные зависимости решения">
+          <ItemList prefix="7" items={data.structural_dependencies.map((i) => i.description)} />
         </Section>
 
         <Section title="8. Зоны неопределённости и структурные разрывы">

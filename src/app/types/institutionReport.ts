@@ -193,14 +193,14 @@ const uncomfortableQuestionSchema = z.object({
         ),
 });
 
-const potentialControlLossPointSchema = z.object({
-    point_id: z
+const structuralDependencySchema = z.object({
+    dependency_id: z
         .string()
-        .describe("Unique identifier for potential control loss point (CL-01, CL-02, etc.)"),
+        .describe("Unique identifier for structural dependency (SD-01, SD-02, etc.)"),
     description: z
         .string()
         .describe(
-            "Statement describing explicitly stated situation where control may transfer, dependency arises, access becomes unilateral, restoration requires consent, or outcome depends on external factors",
+            "Statement describing a structural element on which the functioning of the arrangement depends. Format: '[Component] depends on / is connected to [element]'. No causal constructions, no predictions, no evaluations.",
         ),
 });
 
@@ -255,9 +255,9 @@ export const reportResponseSchema = z.object({
         .array(uncomfortableQuestionSchema)
         .describe("Block 6: Seven fixed uncomfortable questions with explicit answer detection"),
 
-    potential_control_loss_points: z
-        .array(potentialControlLossPointSchema)
-        .describe("Block 7: Potential situations of control transfer or dependency"),
+    structural_dependencies: z
+        .array(structuralDependencySchema)
+        .describe("Block 7: Structural elements on which the functioning of the described arrangement depends"),
 
     uncertainty_and_gaps: z
         .object({

@@ -95,7 +95,7 @@ export function ClarificationForm({ questions, message, isLoading, onSubmit }: P
                 id={`q-${i}`}
                 rows={3}
                 className="w-full resize-y rounded-xl border border-(--border) bg-(--bg-input) px-4 py-3 text-sm text-(--text-primary) placeholder-(--text-muted) leading-relaxed outline-none transition-all duration-150 focus:border-(--border-focus) focus:ring-3 focus:ring-(--accent)/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="Ваш ответ..."
+                placeholder={q.priority === 'structural' ? 'Ваш ответ... (можно пропустить)' : 'Ваш ответ...'}
                 value={answers[i] ?? ''}
                 onChange={(e) => handleChange(i, e.target.value)}
                 disabled={isLoading}
