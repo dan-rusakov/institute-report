@@ -83,3 +83,34 @@ jobs:
             docker compose down ${{ env.SERVICE_NAME }} || true
             VERSION=${{ env.VERSION }} docker compose -f docker-compose.yml up -d ${{ env.SERVICE_NAME }}
           EOF
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1 | sed 's/"/\\"/g')
+          if [ "${{ job.status }}" == "success" ]; then
+            COLOR=5763719
+            STATUS="✅ Deployed"
+          else
+            COLOR=15548997
+            STATUS="❌ Deploy failed"
+          fi
+
+          curl -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"$STATUS\",
+                \"description\": \"**${{ github.repository }}** → \`${{ github.ref_name }}\`\",
+                \"color\": $COLOR,
+                \"fields\": [
+                  { \"name\": \"Environment\", \"value\": \"\`${{ inputs.environment }}\`\", \"inline\": true },
+                  { \"name\": \"Version\", \"value\": \"\`${{ steps.version.outputs.version }}\`\", \"inline\": true },
+                  { \"name\": \"Commit\", \"value\": \"\`$SHORT_SHA\` $COMMIT_MSG\", \"inline\": false },
+                  { \"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true },
+                  { \"name\": \"Run\", \"value\": \"[View](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\", \"inline\": true }
+                ],
+                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+              }]
+            }" \
+            ${{ secrets.DISCORD_DEPLOYMENTS_WEBHOOK }}
