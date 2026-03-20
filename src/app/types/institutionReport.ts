@@ -272,3 +272,15 @@ export const reportResponseSchema = z.object({
 });
 
 export type ReportResponse = z.infer<typeof reportResponseSchema>;
+
+
+export const ReflectionQuestionsSchema = z.object({
+    questions: z
+        .array(
+            z.string().describe(
+                "Структурный вопрос на русском языке. Без обращения к читателю."
+            )
+        ).describe("Список структурных вопросов на русском языке.")
+});
+
+export type ReflectionQuestions = z.infer<typeof ReflectionQuestionsSchema>;

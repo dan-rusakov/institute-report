@@ -40,6 +40,7 @@ export type ReportResponse = {
     elements_without_formal_fixation: Array<{ gap_id: string; description: string }>;
     structural_mismatches: Array<{ mismatch_id: string; description: string }>;
   };
+  reflection_questions?: string[];
   report_id?: string;
   created_at?: string;
 };
@@ -241,6 +242,24 @@ export function ReportDocument({ data, onBack }: Props) {
           </div>
         </Section>
       </div>
+
+      {data.reflection_questions && data.reflection_questions.length > 0 && (
+        <div className="mt-6 bg-(--bg-card) rounded-2xl border border-(--border) shadow-(--shadow-card) p-8 flex flex-col gap-5">
+          <h2 className="text-[17px] font-bold text-(--text-primary) border-b border-(--border) pb-2">
+            Вопросы для рефлексии
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {data.reflection_questions.map((q, idx) => (
+              <li key={idx} className="flex gap-3 items-start">
+                <span className="shrink-0 font-mono text-[11px] font-semibold text-(--accent) bg-(--bg-input) border border-(--border) rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                  {idx + 1}
+                </span>
+                <p className="text-sm text-(--text-primary) leading-relaxed">{q}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

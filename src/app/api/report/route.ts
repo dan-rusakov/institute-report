@@ -4,8 +4,7 @@ import { SynovaCloudSdk } from "@synova-cloud/sdk";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { db } from "~/server/db";
 import { env } from "~/env";
-import { clarificationResponseSchema, type ClarificationResponse } from "../../types/clarificationSchema";
-import { reportResponseSchema, type ReportResponse } from "~/app/types/institutionReport";
+import { reportResponseSchema, type ReportResponse, ReflectionQuestionsSchema, type ReflectionQuestions } from "~/app/types/institutionReport";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -26,71 +25,19 @@ export async function GET(request: Request) {
   return NextResponse.json({ status: "report_ready", hash, ...(report.response as object) });
 }
 
-const clarificationJsonSchema = zodToJsonSchema(clarificationResponseSchema);
 const reportJsonSchema = zodToJsonSchema(reportResponseSchema);
-
-function buildCombinedInput(
-  description: string,
-  previousAnswers: { question: string; answer: string }[],
-): string {
-  if (previousAnswers.length === 0) return description;
-
-  const qa = previousAnswers
-    .map((a) => `В: ${a.question}\nО: ${a.answer}`)
-    .join('\n\n');
-
-  return `${description}\n\nУточнения:\n${qa}`;
-}
+const reflectionQuestionsJsonSchema = zodToJsonSchema(ReflectionQuestionsSchema);
 
 export async function POST(request: Request) {
   const client = new SynovaCloudSdk(env.SYNOVA_SECRET);
-  const body = (await request.json()) as {
-    description: string;
-    previousAnswers?: { question: string; answer: string }[];
-  };
+  const body = (await request.json()) as { enrichedDescription: string };
 
-  const description = body.description?.trim();
-  const previousAnswers = body.previousAnswers ?? [];
-
-  if (!description) {
-    return NextResponse.json(
-      { error: "Description is required" },
-      { status: 400 },
-    );
+  const enrichedDescription = body.enrichedDescription?.trim();
+  if (!enrichedDescription) {
+    return NextResponse.json({ error: "enrichedDescription is required" }, { status: 400 });
   }
 
-  const combinedInput = buildCombinedInput(description, previousAnswers);
-
   try {
-    const clarificationResult = await client.prompts.execute<ClarificationResponse>(
-      'prm_Eg4albd4wBAq',
-      {
-        provider: 'openai',
-        model: 'gpt-5.2',
-        tag: env.PROMPT_VERSION_TAG,
-        variables: { raw_description: combinedInput },
-        responseSchema: clarificationJsonSchema,
-      },
-    );
-
-    const clarification = clarificationResponseSchema.parse(clarificationResult.object);
-
-    if (clarification.status === 'clarification_needed') {
-      if (!clarification.questions?.length) {
-        throw new Error('Model returned status=clarification_needed but questions are missing');
-      }
-      return NextResponse.json({
-        status: 'clarification_needed',
-        questions: clarification.questions,
-        message_to_user: clarification.message_to_user,
-      });
-    }
-
-    const enrichedDescription = clarification.enriched_description;
-    if (!enrichedDescription?.trim()) {
-      throw new Error('Model returned status=ready but enriched_description is missing');
-    }
-
     const hash = createHash("sha256").update(enrichedDescription).digest("hex");
 
     const existing = await db.report.findUnique({
@@ -113,6 +60,19 @@ export async function POST(request: Request) {
 
     const responseData = result.object;
 
+    const reflectionResult = await client.prompts.execute<ReflectionQuestions>(
+      'prm_p9EwbQ74Yw08',
+      {
+        provider: 'openai',
+        model: 'gpt-5.2',
+        tag: env.PROMPT_VERSION_TAG,
+        variables: { report: JSON.stringify(responseData) },
+        responseSchema: reflectionQuestionsJsonSchema,
+      }
+    );
+
+    const reflectionQuestions = reflectionResult.object?.questions ?? [];
+
     const report = await db.report.create({
       data: {
         raw_description: enrichedDescription,
@@ -125,6 +85,7 @@ export async function POST(request: Request) {
 
     const reportResponse = {
       ...responseData,
+      reflection_questions: reflectionQuestions,
       report_id: report.id,
       created_at: report.createdAt,
     };
@@ -137,7 +98,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'report_ready', hash, ...reportResponse });
   } catch (error) {
     console.error("Error generating report:", error instanceof Error ? error.message : error);
-
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },

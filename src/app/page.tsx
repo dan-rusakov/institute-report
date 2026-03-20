@@ -2,22 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { ReportDocument, type ReportResponse } from "./components/ReportDocument";
-import { ClarificationForm } from "./components/ClarificationForm";
-import type { ClarificationQuestion } from "~/app/types/clarificationSchema";
+import { ContextForm } from "./components/ContextForm";
+import type { SessionState, Category } from "~/app/types/contextSchema";
 
-type Phase = 'input' | 'clarifying' | 'report';
+type Phase = 'input' | 'context' | 'report';
 
-interface ClarificationState {
-  questions: ClarificationQuestion[];
-  message: string;
+interface ContextState {
+  categoryLabel: Category;
+  questions: string[];
+  sessionState: SessionState;
 }
 
 export default function HomePage() {
   const [phase, setPhase] = useState<Phase>('input');
   const [description, setDescription] = useState('');
-  const [originalDescription, setOriginalDescription] = useState('');
-  const [previousAnswers, setPreviousAnswers] = useState<{ question: string; answer: string }[]>([]);
-  const [clarification, setClarification] = useState<ClarificationState | null>(null);
+  const [context, setContext] = useState<ContextState | null>(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(false);
   const [error, setError] = useState('');
@@ -49,35 +48,48 @@ export default function HomePage() {
       .finally(() => setInitializing(false));
   }, []);
 
-  async function callApi(desc: string, answers: { question: string; answer: string }[]) {
+  async function generateReport(enrichedDescription: string) {
+    const res = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enrichedDescription }),
+    });
+
+    if (!res.ok) throw new Error('Request failed');
+
+    const data = (await res.json()) as { status: string; hash?: string } & Record<string, unknown>;
+    const { status: _status, hash: newHash, ...reportData } = data;
+    if (newHash) {
+      setReportHash(newHash);
+      window.history.replaceState(null, '', `?hash=${newHash}`);
+    }
+    setResult(reportData as ReportResponse);
+    setPhase('report');
+  }
+
+  async function handleSubmit() {
+    if (!description.trim()) return;
     setLoading(true);
     setError('');
 
     try {
-      const res = await fetch('/api/report', {
+      const res = await fetch('/api/context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: desc, previousAnswers: answers }),
+        body: JSON.stringify({ description }),
       });
 
       if (!res.ok) throw new Error('Request failed');
 
-      const data = (await res.json()) as { status: string; hash?: string } & Record<string, unknown>;
+      const data = (await res.json()) as
+        | { status: 'questions'; categoryLabel: Category; questions: string[]; sessionState: SessionState }
+        | { status: 'ready'; enrichedDescription: string };
 
-      if (data.status === 'clarification_needed') {
-        setClarification({
-          questions: data.questions as ClarificationQuestion[],
-          message: data.message_to_user as string,
-        });
-        setPhase('clarifying');
+      if (data.status === 'questions') {
+        setContext({ categoryLabel: data.categoryLabel, questions: data.questions, sessionState: data.sessionState });
+        setPhase('context');
       } else {
-        const { status: _status, hash: newHash, ...reportData } = data;
-        if (newHash) {
-          setReportHash(newHash);
-          window.history.replaceState(null, '', `?hash=${newHash}`);
-        }
-        setResult(reportData as ReportResponse);
-        setPhase('report');
+        await generateReport(data.enrichedDescription);
       }
     } catch {
       setError('Не удалось создать репорт. Попробуйте ещё раз.');
@@ -86,17 +98,34 @@ export default function HomePage() {
     }
   }
 
-  async function handleSubmit() {
-    if (!description.trim()) return;
-    setOriginalDescription(description);
-    setPreviousAnswers([]);
-    await callApi(description, []);
-  }
+  async function handleContextAnswer(answers: string[]) {
+    if (!context) return;
+    setLoading(true);
+    setError('');
 
-  async function handleClarificationSubmit(answers: { question: string; answer: string }[]) {
-    const merged = [...previousAnswers, ...answers];
-    setPreviousAnswers(merged);
-    await callApi(originalDescription, merged);
+    try {
+      const res = await fetch('/api/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionState: context.sessionState, answers }),
+      });
+
+      if (!res.ok) throw new Error('Request failed');
+
+      const data = (await res.json()) as
+        | { status: 'questions'; categoryLabel: Category; questions: string[]; sessionState: SessionState }
+        | { status: 'ready'; enrichedDescription: string };
+
+      if (data.status === 'questions') {
+        setContext({ categoryLabel: data.categoryLabel, questions: data.questions, sessionState: data.sessionState });
+      } else {
+        await generateReport(data.enrichedDescription);
+      }
+    } catch {
+      setError('Не удалось создать репорт. Попробуйте ещё раз.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCopyLink() {
@@ -110,9 +139,7 @@ export default function HomePage() {
   function handleReset() {
     setPhase('input');
     setDescription('');
-    setOriginalDescription('');
-    setPreviousAnswers([]);
-    setClarification(null);
+    setContext(null);
     setResult(null);
     setError('');
     setReportHash(null);
@@ -162,14 +189,25 @@ export default function HomePage() {
     );
   }
 
-  if (phase === 'clarifying' && clarification) {
+  if (phase === 'context' && context) {
     return (
       <main className="min-h-screen bg-(--bg-page) flex flex-col items-center justify-center px-4 py-12">
-        <ClarificationForm
-          questions={clarification.questions}
-          message={clarification.message}
+        {error && (
+          <div className="w-full max-w-2xl mb-4 flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-[13px] text-(--error)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            {error}
+          </div>
+        )}
+        <ContextForm
+          categoryLabel={context.categoryLabel}
+          questions={context.questions}
+          sessionState={context.sessionState}
           isLoading={loading}
-          onSubmit={handleClarificationSubmit}
+          onSubmit={handleContextAnswer}
         />
       </main>
     );
