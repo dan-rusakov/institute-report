@@ -53,3 +53,14 @@ export interface SessionState {
   currentQuestions: string[];
   log: CategoryLogEntry[];
 }
+
+export const InputValidationResponseSchema = z.object({
+  classification: z
+    .enum(["decision", "question", "irrelevant"])
+    .describe("Тип ввода: decision — описание сделки/решения, question — вопрос ожидающий совета, irrelevant — не по теме."),
+  message: z
+    .string()
+    .describe("Человекопонятное сообщение на русском языке. Пустая строка если classification = decision."),
+});
+
+export type InputValidationResponse = z.infer<typeof InputValidationResponseSchema>;

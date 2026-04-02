@@ -29,7 +29,7 @@ const reportJsonSchema = zodToJsonSchema(reportResponseSchema);
 const reflectionQuestionsJsonSchema = zodToJsonSchema(ReflectionQuestionsSchema);
 
 export async function POST(request: Request) {
-  const client = new SynovaCloudSdk(env.SYNOVA_SECRET);
+  const client = new SynovaCloudSdk(env.SYNOVA_SECRET, { timeout: 120_000, retry: { maxRetries: 1 } });
   const body = (await request.json()) as { enrichedDescription: string };
 
   const enrichedDescription = body.enrichedDescription?.trim();

@@ -83,7 +83,13 @@ export default function HomePage() {
 
       const data = (await res.json()) as
         | { status: 'questions'; categoryLabel: Category; questions: string[]; sessionState: SessionState }
-        | { status: 'ready'; enrichedDescription: string };
+        | { status: 'ready'; enrichedDescription: string }
+        | { status: 'validation_failed'; classification: string; message: string };
+
+      if (data.status === 'validation_failed') {
+        setError(data.message);
+        return;
+      }
 
       if (data.status === 'questions') {
         setContext({ categoryLabel: data.categoryLabel, questions: data.questions, sessionState: data.sessionState });
@@ -216,23 +222,25 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-(--bg-page) flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl flex flex-col gap-8">
-        <div className="flex flex-col items-center text-center gap-2">
+        <div className="flex flex-col items-center text-center gap-3">
           <h1 className="text-[32px] font-bold text-(--text-primary) tracking-tight leading-tight">
-            Генерация репорта
+            Проверка решения
           </h1>
-          <p className="text-[16px] text-(--text-secondary)">
-            Опишите запрос, и система автоматически сформирует структурный отчёт
+          <p className="text-[15px] text-(--text-secondary) max-w-lg leading-relaxed">
+            Опишите сделку, партнёрство или инвестицию, которую вы рассматриваете. Сервис покажет, как устроена конструкция этого решения — кто что контролирует, какие обязательства возникают и что не зафиксировано.
           </p>
         </div>
 
         <div className="bg-(--bg-card) rounded-2xl border border-(--border) shadow-(--shadow-card) p-6 flex flex-col gap-4">
           <textarea
             className="w-full min-h-56 resize-y rounded-xl border border-(--border) bg-(--bg-input) px-4 py-3.5 text-sm text-(--text-primary) placeholder-(--text-muted) leading-relaxed outline-none transition-all duration-150 focus:border-(--border-focus) focus:ring-3 focus:ring-(--accent)/10 disabled:opacity-50 disabled:cursor-not-allowed"
-            placeholder="Введите описание кейса для генерации структурного репорта..."
+            placeholder={"Опишите ситуацию: что за сделка, кто участвует, какие условия, что уже договорено...\n\nНапример: «Рассматриваю покупку 25% доли в автомойке за 800 тыс. Второй участник владеет остальные 75% и управляет. Прибыль делим пропорционально долям, но письменно это не закреплено.»"}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={loading}
           />
+
+
 
           {error && (
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-[13px] text-(--error)">

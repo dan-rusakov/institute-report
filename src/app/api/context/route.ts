@@ -6,8 +6,10 @@ import {
   CATEGORIES,
   QuestionGeneratorResponseSchema,
   TopicExtractionResponseSchema,
+  InputValidationResponseSchema,
   type QuestionGeneratorResponse,
   type TopicExtractionResponse,
+  type InputValidationResponse,
   type SessionState,
   type Category,
   getCurrentCategoryDimensions,
@@ -15,6 +17,7 @@ import {
 
 const questionGeneratorJsonSchema = zodToJsonSchema(QuestionGeneratorResponseSchema);
 const topicExtractionJsonSchema = zodToJsonSchema(TopicExtractionResponseSchema);
+const inputValidationJsonSchema = zodToJsonSchema(InputValidationResponseSchema);
 
 function buildEnrichedDescription(state: SessionState): string {
   const parts: string[] = [state.originalDescription];
@@ -49,6 +52,28 @@ export async function POST(request: Request) {
       if (!description) {
         return NextResponse.json({ error: "description is required" }, { status: 400 });
       }
+
+      const validationResult = await client.prompts.execute<InputValidationResponse>(
+        'prm_eBnpKGzSLio0',
+        {
+          provider: 'openai',
+          model: 'gpt-4.1-mini',
+          tag: env.PROMPT_VERSION_TAG,
+          variables: { user_input: description },
+          responseSchema: inputValidationJsonSchema,
+        },
+      );
+
+      const validation = InputValidationResponseSchema.parse(validationResult.object);
+
+      if (validation.classification !== 'decision') {
+        return NextResponse.json({
+          status: 'validation_failed',
+          classification: validation.classification,
+          message: validation.message,
+        });
+      }
+
       state = {
         originalDescription: description,
         categoryIndex: 0,
