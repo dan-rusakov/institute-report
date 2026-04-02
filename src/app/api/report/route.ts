@@ -72,6 +72,7 @@ export async function POST(request: Request) {
     );
 
     const reflectionQuestions = reflectionResult.object?.questions ?? [];
+    const structuralFocus = reflectionResult.object?.structural_focus ?? '';
 
     const report = await db.report.create({
       data: {
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
 
     const reportResponse = {
       ...responseData,
+      structural_focus: structuralFocus,
       reflection_questions: reflectionQuestions,
       report_id: report.id,
       created_at: report.createdAt,

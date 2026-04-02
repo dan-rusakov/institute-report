@@ -275,12 +275,18 @@ export type ReportResponse = z.infer<typeof reportResponseSchema>;
 
 
 export const ReflectionQuestionsSchema = z.object({
+    structural_focus: z
+        .string()
+        .describe(
+            "Цепочка фактических утверждений, описывающая центральное структурное напряжение кейса. Каждое утверждение — один факт из репорта. Вместе они образуют связную последовательность от позиции пользователя до точки наибольшей неопределённости. Без оценок, без выводов."
+        ),
     questions: z
         .array(
             z.string().describe(
-                "Структурный вопрос на русском языке. Без обращения к читателю."
+                "Структурный вопрос на русском языке, привязанный к конкретным элементам кейса. Без обращения к читателю."
             )
-        ).describe("Список структурных вопросов на русском языке.")
+        )
+        .describe("Список структурных вопросов, следующих по цепочке напряжения кейса."),
 });
 
 export type ReflectionQuestions = z.infer<typeof ReflectionQuestionsSchema>;
