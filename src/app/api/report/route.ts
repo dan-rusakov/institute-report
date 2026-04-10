@@ -68,6 +68,7 @@ export async function POST(request: Request) {
         tag: env.PROMPT_VERSION_TAG,
         variables: { report: JSON.stringify(responseData) },
         responseSchema: reflectionQuestionsJsonSchema,
+        traceId: result.traceId,
       }
     );
 

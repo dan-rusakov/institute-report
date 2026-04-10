@@ -47,6 +47,9 @@ export async function POST(request: Request) {
   try {
     let state: SessionState;
 
+    let inputValidationTraceId: undefined | string;
+    let topicSummaryTraceId: undefined | string;
+
     if (!body.sessionState) {
       const description = body.description?.trim();
       if (!description) {
@@ -63,6 +66,7 @@ export async function POST(request: Request) {
           responseSchema: inputValidationJsonSchema,
         },
       );
+      inputValidationTraceId = validationResult.traceId;
 
       const validation = InputValidationResponseSchema.parse(validationResult.object);
 
@@ -98,6 +102,7 @@ export async function POST(request: Request) {
           responseSchema: topicExtractionJsonSchema,
         },
       );
+      topicSummaryTraceId = topicResult.traceId;
 
       const topicData = TopicExtractionResponseSchema.parse(topicResult.object);
 
@@ -134,6 +139,7 @@ export async function POST(request: Request) {
             covered_topics: state.coveredTopics.join('\n'),
           },
           responseSchema: questionGeneratorJsonSchema,
+          traceId: inputValidationTraceId ?? topicSummaryTraceId,
         },
       );
 
