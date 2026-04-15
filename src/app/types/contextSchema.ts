@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const CATEGORIES = ['A', 'B', 'C', 'D', 'E'] as const;
+export const CATEGORIES = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const CATEGORY_DIMENSIONS: Record<string, string[]> = {
@@ -9,6 +9,7 @@ const CATEGORY_DIMENSIONS: Record<string, string[]> = {
   C: ["C1", "C2", "C3", "C4", "C5", "C6", "C7"],
   D: ["D1", "D2", "D3", "D4", "D5", "D6"],
   E: ["E1", "E2", "E3", "E4"],
+  F: ["F1", "F2", "F3", "F4", "F5", "F6", "F7"],
 };
 
 export function getCurrentCategoryDimensions(categoryId: string): string {

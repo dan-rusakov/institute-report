@@ -132,14 +132,14 @@ const originalDecisionStructureSchema = z.object({
         ),
 });
 
-const symmetrySchema = z.object({
-    symmetry_id: z
+const ownershipAuthorityMappingSchema = z.object({
+    mapping_id: z
         .string()
-        .describe("Unique identifier of the symmetry or asymmetry element (SA-01, SA-02, etc.)"),
+        .describe("Unique identifier of the ownership/authority mapping element (OAM-01, OAM-02, etc.)"),
     description: z
         .string()
         .describe(
-            "Statement describing structural relationship between shares and control, obligations and authority, risk distribution relative to shares, or explicitly stated dominant authority",
+            "Statement describing structural relationship between ownership shares and actual decision-making authority, declared obligations and assigned authority, distribution of financial exposure relative to ownership shares, declared influence mechanisms, or existence of dominant authority (only if explicitly stated)",
         ),
 });
 
@@ -235,9 +235,9 @@ export const reportResponseSchema = z.object({
         .array(originalDecisionStructureSchema)
         .describe("Block 1: Structural elements of the original decision configuration"),
 
-    formal_symmetry_asymmetry: z
-        .array(symmetrySchema)
-        .describe("Block 2: Structural symmetry or asymmetry between shares, control, obligations, and risk"),
+    ownership_authority_mapping: z
+        .array(ownershipAuthorityMappingSchema)
+        .describe("Block 2: Structural relationships between ownership shares, decision-making authority, obligations, and financial exposure"),
 
     control_distribution: z
         .array(controlDistributionSchema)

@@ -25,7 +25,7 @@ export type CaseIdentification = {
 export type ReportResponse = {
   case_identification: CaseIdentification;
   original_decision_structure: Block1Entry[];
-  formal_symmetry_asymmetry: Array<{ symmetry_id: string; description: string }>;
+  ownership_authority_mapping: Array<{ mapping_id: string; description: string }>;
   control_distribution: Array<{ control_id: string; description: string }>;
   responsibility_distribution: Array<{ responsibility_id: string; description: string }>;
   irreversibility_points: Array<{ point_id: string; description: string }>;
@@ -178,8 +178,8 @@ export function ReportDocument({ data, onBack }: Props) {
           )}
         </Section>
 
-        <Section title="Блок 2 — Формальная симметрия / фактическая асимметрия">
-          <ItemList prefix="2" items={data.formal_symmetry_asymmetry.map((i) => i.description)} />
+        <Section title="Блок 2 — Соотношение долей и полномочий">
+          <ItemList prefix="2" items={data.ownership_authority_mapping.map((i) => i.description)} />
         </Section>
 
         <Section title="Блок 3 — Распределение контроля">
