@@ -4,10 +4,10 @@ export const CATEGORIES = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const CATEGORY_DIMENSIONS: Record<string, string[]> = {
-  A: ["A1", "A2", "A3", "A4", "A5"],
+  A: ["A1", "A2", "A3", "A4", "A4b", "A4c", "A4d", "A5", "A6"],
   B: ["B1", "B2", "B3", "B4", "B5", "B6"],
-  C: ["C1", "C2", "C3", "C4", "C5", "C6", "C7"],
-  D: ["D1", "D2", "D3", "D4", "D5", "D6"],
+  C: ["C1", "C2", "C3", "C4", "C5", "C5b", "C5c", "C6", "C7"],
+  D: ["D1", "D2", "D2b", "D2c", "D3", "D4", "D5", "D6"],
   E: ["E1", "E2", "E3", "E4"],
   F: ["F1", "F2", "F3", "F4", "F5", "F6", "F7"],
 };
