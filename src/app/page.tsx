@@ -23,6 +23,8 @@ export default function HomePage() {
   const [result, setResult] = useState<ReportResponse | null>(null);
   const [reportHash, setReportHash] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [insufficient, setInsufficient] = useState<{ topics: string[]; message: string } | null>(null);
+  const [insufficientShown, setInsufficientShown] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -67,16 +69,19 @@ export default function HomePage() {
     setPhase('report');
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(opts: { skipInsufficientCheck?: boolean } = {}) {
     if (!description.trim()) return;
     setLoading(true);
     setError('');
+    setInsufficient(null);
+
+    const skip = opts.skipInsufficientCheck ?? insufficientShown;
 
     try {
       const res = await fetch('/api/context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description, skipInsufficientCheck: skip }),
       });
 
       if (!res.ok) throw new Error('Request failed');
@@ -84,10 +89,17 @@ export default function HomePage() {
       const data = (await res.json()) as
         | { status: 'questions'; categoryLabel: Category; questions: string[]; sessionState: SessionState }
         | { status: 'ready'; enrichedDescription: string }
-        | { status: 'validation_failed'; classification: string; message: string };
+        | { status: 'validation_failed'; classification: string; message: string }
+        | { status: 'insufficient'; missingTopics: string[]; message: string };
 
       if (data.status === 'validation_failed') {
         setError(data.message);
+        return;
+      }
+
+      if (data.status === 'insufficient') {
+        setInsufficient({ topics: data.missingTopics, message: data.message });
+        setInsufficientShown(true);
         return;
       }
 
@@ -149,6 +161,8 @@ export default function HomePage() {
     setResult(null);
     setError('');
     setReportHash(null);
+    setInsufficient(null);
+    setInsufficientShown(false);
     window.history.replaceState(null, '', window.location.pathname);
   }
 
@@ -253,8 +267,37 @@ export default function HomePage() {
             </div>
           )}
 
+          {insufficient && !error && (
+            <div className="flex flex-col gap-2.5 px-4 py-3.5 rounded-lg bg-amber-50 border border-amber-200 text-[13px] text-amber-900">
+              <div className="flex items-start gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div className="flex flex-col gap-1.5">
+                  <div className="font-semibold">Описание слишком скудное</div>
+                  {insufficient.message && <div className="leading-relaxed">{insufficient.message}</div>}
+                </div>
+              </div>
+              {insufficient.topics.length > 0 && (
+                <div className="flex flex-col gap-1 pl-6">
+                  <div className="text-[12px] font-medium text-amber-800">Не раскрыто:</div>
+                  <ul className="list-disc list-inside space-y-0.5 text-amber-900 leading-relaxed">
+                    {insufficient.topics.map((topic, i) => (
+                      <li key={i}>{topic}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="pl-6 text-[12px] text-amber-800 leading-relaxed">
+                Дополните описание выше для более глубокого анализа или нажмите кнопку, чтобы продолжить с текущим вводом.
+              </div>
+            </div>
+          )}
+
           <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             disabled={loading || !description.trim()}
             className="w-full py-3 px-5 rounded-xl bg-(--accent) text-white text-[15px] font-semibold transition-colors duration-150 hover:bg-(--accent-hover) disabled:bg-(--text-muted) disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >

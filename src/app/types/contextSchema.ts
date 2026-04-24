@@ -57,11 +57,14 @@ export interface SessionState {
 
 export const InputValidationResponseSchema = z.object({
   classification: z
-    .enum(["decision", "question", "irrelevant"])
-    .describe("Тип ввода: decision — описание сделки/решения, question — вопрос ожидающий совета, irrelevant — не по теме."),
+    .enum(["decision", "decision_insufficient", "question", "irrelevant"])
+    .describe("Тип ввода: decision — описание сделки/решения с минимумом данных, decision_insufficient — описание решения без минимума (стороны/предмет/сумма), question — вопрос ожидающий совета, irrelevant — не по теме."),
   message: z
     .string()
-    .describe("Человекопонятное сообщение на русском языке. Пустая строка если classification = decision."),
+    .describe("Человекопонятное сообщение на русском языке. Для decision — пустая строка. Для decision_insufficient — короткое пояснение, чего не хватает (1-2 предложения)."),
+  missing_topics: z
+    .array(z.string())
+    .describe("Список названий непокрытых тем (2-5 слов каждая) для decision_insufficient. Это названия тем, а не вопросы. Пустой массив для остальных классификаций."),
 });
 
 export type InputValidationResponse = z.infer<typeof InputValidationResponseSchema>;

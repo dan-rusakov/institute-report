@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     description?: string;
     sessionState?: SessionState | null;
     answers?: string[];
+    skipInsufficientCheck?: boolean;
   };
 
   try {
@@ -70,10 +71,22 @@ export async function POST(request: Request) {
 
       const validation = InputValidationResponseSchema.parse(validationResult.object);
 
-      if (validation.classification !== 'decision') {
+      if (validation.classification === 'question' || validation.classification === 'irrelevant') {
         return NextResponse.json({
           status: 'validation_failed',
           classification: validation.classification,
+          message: validation.message,
+        });
+      }
+
+      if (
+        validation.classification === 'decision_insufficient' &&
+        validation.missing_topics.length > 0 &&
+        !body.skipInsufficientCheck
+      ) {
+        return NextResponse.json({
+          status: 'insufficient',
+          missingTopics: validation.missing_topics,
           message: validation.message,
         });
       }
