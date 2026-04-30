@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
-    "@synova-cloud/sdk": "^2.5.0",
+    "@synova-cloud/sdk": "^2.14.0",
     "@t3-oss/env-nextjs": "^0.12.0",
     "dayjs": "^1.11.19",
     "next": "^15.2.3",

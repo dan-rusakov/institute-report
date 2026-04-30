@@ -25,9 +25,12 @@ export default function HomePage() {
   const [copied, setCopied] = useState(false);
   const [insufficient, setInsufficient] = useState<{ topics: string[]; message: string } | null>(null);
   const [insufficientShown, setInsufficientShown] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    setDebugMode(params.get('debug') === '1');
     const hash = params.get('hash');
     if (!hash) return;
 
@@ -146,6 +149,27 @@ export default function HomePage() {
     }
   }
 
+  async function handleRegenerate() {
+    if (!reportHash || regenerating) return;
+    setRegenerating(true);
+    setError('');
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regenerateHash: reportHash }),
+      });
+      if (!res.ok) throw new Error('Request failed');
+      const data = (await res.json()) as { status: string; hash?: string } & Record<string, unknown>;
+      const { status: _status, hash: _hash, ...reportData } = data;
+      setResult(reportData as ReportResponse);
+    } catch {
+      setError('Не удалось перегенерировать репорт.');
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   async function handleCopyLink() {
     if (!reportHash) return;
     const url = `${window.location.origin}?hash=${reportHash}`;
@@ -180,7 +204,33 @@ export default function HomePage() {
     return (
       <main className="min-h-screen bg-(--bg-page)">
         {reportHash && (
-          <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-2 bg-(--bg-card) border-b border-(--border)">
+          <div className="sticky top-0 z-10 flex items-center justify-end gap-2 px-4 py-2 bg-(--bg-card) border-b border-(--border)">
+            {debugMode && (
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] text-(--text-secondary) hover:bg-(--bg-input) transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Перегенерировать с актуальными промптами (debug)"
+              >
+                {regenerating ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Перегенерация...
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="23 4 23 10 17 10" />
+                      <polyline points="1 20 1 14 7 14" />
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    Перегенерировать
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={handleCopyLink}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] text-(--text-secondary) hover:bg-(--bg-input) transition-colors duration-150"

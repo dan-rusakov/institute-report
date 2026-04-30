@@ -30,22 +30,45 @@ const reflectionQuestionsJsonSchema = zodToJsonSchema(ReflectionQuestionsSchema)
 
 export async function POST(request: Request) {
   const client = new SynovaCloudSdk(env.SYNOVA_SECRET, { timeout: 120_000, retry: { maxRetries: 1 } });
-  const body = (await request.json()) as { enrichedDescription: string };
+  const body = (await request.json()) as {
+    enrichedDescription?: string;
+    skipCache?: boolean;
+    regenerateHash?: string;
+  };
 
-  const enrichedDescription = body.enrichedDescription?.trim();
-  if (!enrichedDescription) {
-    return NextResponse.json({ error: "enrichedDescription is required" }, { status: 400 });
+  const skipCache = body.skipCache === true;
+  const regenerateHash = body.regenerateHash?.trim();
+
+  let enrichedDescription: string;
+  let existingForRegen: Awaited<ReturnType<typeof db.report.findUnique>> = null;
+
+  if (regenerateHash) {
+    existingForRegen = await db.report.findUnique({
+      where: { raw_description_hash: regenerateHash },
+    });
+    if (!existingForRegen) {
+      return NextResponse.json({ error: "Report not found for regeneration" }, { status: 404 });
+    }
+    enrichedDescription = existingForRegen.raw_description;
+  } else {
+    const trimmed = body.enrichedDescription?.trim();
+    if (!trimmed) {
+      return NextResponse.json({ error: "enrichedDescription is required" }, { status: 400 });
+    }
+    enrichedDescription = trimmed;
   }
 
   try {
-    const hash = createHash("sha256").update(enrichedDescription).digest("hex");
+    const hash = regenerateHash ?? createHash("sha256").update(enrichedDescription).digest("hex");
 
-    const existing = await db.report.findUnique({
-      where: { raw_description_hash: hash },
-    });
+    if (!skipCache && !regenerateHash) {
+      const existing = await db.report.findUnique({
+        where: { raw_description_hash: hash },
+      });
 
-    if (existing) {
-      return NextResponse.json({ status: 'report_ready', hash, ...(existing.response as object) });
+      if (existing) {
+        return NextResponse.json({ status: 'report_ready', hash, ...(existing.response as object) });
+      }
     }
 
     const result = await client.prompts.execute<ReportResponse>(
@@ -74,6 +97,31 @@ export async function POST(request: Request) {
 
     const reflectionQuestions = reflectionResult.object?.questions ?? [];
     const structuralFocus = reflectionResult.object?.structural_focus ?? '';
+
+    if (skipCache) {
+      const reportResponse = {
+        ...responseData,
+        structural_focus: structuralFocus,
+        reflection_questions: reflectionQuestions,
+        created_at: new Date(),
+      };
+      return NextResponse.json({ status: 'report_ready', hash, ...reportResponse });
+    }
+
+    if (existingForRegen) {
+      const reportResponse = {
+        ...responseData,
+        structural_focus: structuralFocus,
+        reflection_questions: reflectionQuestions,
+        report_id: existingForRegen.id,
+        created_at: existingForRegen.createdAt,
+      };
+      await db.report.update({
+        where: { id: existingForRegen.id },
+        data: { response: reportResponse },
+      });
+      return NextResponse.json({ status: 'report_ready', hash, ...reportResponse });
+    }
 
     const report = await db.report.create({
       data: {
