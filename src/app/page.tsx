@@ -288,10 +288,10 @@ export default function HomePage() {
       <div className="w-full max-w-2xl flex flex-col gap-8">
         <div className="flex flex-col items-center text-center gap-3">
           <h1 className="text-[32px] font-bold text-(--text-primary) tracking-tight leading-tight">
-            Проверка решения
+            Проверь решение до того, как оно обойдётся дорого
           </h1>
           <p className="text-[15px] text-(--text-secondary) max-w-lg leading-relaxed">
-            Опишите сделку, партнёрство или инвестицию, которую вы рассматриваете. Сервис покажет, как устроена конструкция этого решения — кто что контролирует, какие обязательства возникают и что не зафиксировано.
+            Покажем скрытые ошибки в партнёрстве, инвестиции или покупке: кто что контролирует, какие обязательства возникают и что не зафиксировано.
           </p>
         </div>
 
@@ -356,10 +356,10 @@ export default function HomePage() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                Анализ...
+                Ищем ошибки...
               </>
             ) : (
-              'Сгенерировать репорт'
+              'Найти ошибки в решении'
             )}
           </button>
         </div>
