@@ -237,9 +237,11 @@ export function ReportDocument({ data, onBack }: Props) {
             <SubSection title="8.1 — Элементы без формальной фиксации">
               <ItemList prefix="8.1" items={data.uncertainty_and_gaps.elements_without_formal_fixation.map((i) => i.description)} />
             </SubSection>
-            <SubSection title="8.2 — Структурные несоответствия">
-              <ItemList prefix="8.2" items={data.uncertainty_and_gaps.structural_mismatches.map((i) => i.description)} />
-            </SubSection>
+            {data.uncertainty_and_gaps.structural_mismatches.length > 0 && (
+              <SubSection title="8.2 — Структурные несоответствия">
+                <ItemList prefix="8.2" items={data.uncertainty_and_gaps.structural_mismatches.map((i) => i.description)} />
+              </SubSection>
+            )}
           </div>
         </Section>
       </div>
